@@ -1,0 +1,183 @@
+@import "tailwindcss";
+
+@theme {
+  --color-void: #000000;
+  --color-surface: #0a0a0a;
+  --color-raised: #141414;
+  --color-line: #1f1f1f;
+  --color-line-strong: #2e2e2e;
+  --color-ink: #ededed;
+  --color-ink-2: #a1a1a1;
+  --color-ink-3: #6b6b6b;
+  --color-danger: #e5484d;
+
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-notch: 6px;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-line);
+  }
+
+  html {
+    color-scheme: dark;
+    background-color: var(--color-void);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-void);
+    color: var(--color-ink);
+    font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--color-ink);
+    color: var(--color-void);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  /* Native controls must opt back into the dark palette. */
+  input,
+  textarea,
+  select,
+  button {
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-ink-3);
+  }
+
+  /* Remove the number-input spinners — they break the mono column rhythm. */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-raised);
+    border: 3px solid var(--color-void);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-line-strong);
+  }
+}
+
+@layer utilities {
+  /* Optical tracking for large text. */
+  .tracking-display {
+    letter-spacing: -0.045em;
+  }
+
+  .text-hero {
+    letter-spacing: -0.058em;
+    line-height: 1.02;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@keyframes drain {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes rail-rise {
+  0% {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes settle-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tick-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* The one orchestrated moment: a hairline that fills left to right,
+   with everything else rising in behind it. Runs once, then nothing. */
+.animate-drain {
+  transform-origin: left center;
+  animation: drain 1100ms var(--ease-out-expo) forwards;
+}
+
+.animate-rail-rise {
+  animation: rail-rise 700ms var(--ease-out-expo) both;
+}
+
+.animate-settle-in {
+  animation: settle-in 800ms var(--ease-out-expo) both;
+}
+
+.animate-tick-in {
+  animation: tick-in 160ms var(--ease-out-expo) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

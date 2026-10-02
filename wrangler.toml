@@ -1,0 +1,17 @@
+name = "flowlist"
+main = ".open-next/worker.js"
+compatibility_date = "2026-10-02"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[dev]
+port = 4565
+
+[[d1_databases]]
+binding = "DB"
+database_name = "flowlist-db"
+database_id = "7386d6e6-5071-4bef-8622-4ad123e8bfde"
+migrations_dir = "migrations"
