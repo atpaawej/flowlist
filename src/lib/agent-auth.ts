@@ -168,10 +168,12 @@ export async function withAgentAuth<A>(
   let db: DatabaseService;
   try {
     db = await getDatabase();
-  } catch {
-    // Deliberately does not echo the cause: `getDatabase` throws messages that
-    // name the account, the database id, and the credential path.
-    console.error("[flowlist] agent auth rejected: RESOLVER_ERROR");
+  } catch (e) {
+    // Deliberately does not echo the cause to the caller: `getDatabase` throws
+    // messages that name the account, the database id, and the credential
+    // path. It is logged here, server-side, where those values are not
+    // readable by an unauthenticated request.
+    console.error("[flowlist] agent auth rejected: RESOLVER_ERROR", e);
     return fail(
       "RESOLVER_ERROR",
       "This service could not reach its database.",
