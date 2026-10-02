@@ -15,3 +15,15 @@ binding = "DB"
 database_name = "flowlist-db"
 database_id = "7386d6e6-5071-4bef-8622-4ad123e8bfde"
 migrations_dir = "migrations"
+
+# Per-user request budget for /api/agent/* — 120 requests per minute, keyed by
+# the Clerk user id the agent token resolves to. Counters live in Cloudflare,
+# not D1, so agent traffic never contends with the reads serving the dashboard.
+# Absent under `next dev`, where the guard skips limiting entirely.
+#
+# Provision once with: npx wrangler ratelimits create AGENT_RATE_LIMITER
+[[unsafe.bindings]]
+name = "AGENT_RATE_LIMITER"
+type = "ratelimits"
+namespace_id = "1001"
+simple = { limit = 120, period = 60 }

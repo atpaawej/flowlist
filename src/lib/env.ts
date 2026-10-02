@@ -2,6 +2,15 @@ import { Schema } from "effect";
 
 export const EnvSchema = Schema.Struct({
   PORT: Schema.optional(Schema.String),
+  /**
+   * The hostname AgentOnboard tokens are minted for, which is what the agent
+   * API is published under. Also what `GET /auth.md` advertises — both read this
+   * one value, so the published contract cannot drift from what we verify.
+   *
+   * Dev is `localhost:4565` (the dev server port is part of the identity for
+   * localhost); production is `flowlist.agentonboard.xyz`.
+   */
+  AON_AUDIENCE: Schema.optional(Schema.String),
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: Schema.String,
   NEXT_PUBLIC_CLERK_SIGN_IN_URL: Schema.optional(Schema.String),
   NEXT_PUBLIC_CLERK_SIGN_UP_URL: Schema.optional(Schema.String),
