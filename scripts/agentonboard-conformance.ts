@@ -16,7 +16,7 @@ import {
   normalizeEmail,
   verifyAgentToken,
 } from "@agentonboard/sdk";
-// @ts-expect-error — JSON import; this tsconfig has no resolveJsonModule.
+import type { JSONWebKeySet } from "jose";
 import vector from "@agentonboard/sdk/vectors/agent-token-v1.json" with { type: "json" };
 
 type Json = Record<string, unknown>;
@@ -55,11 +55,13 @@ const keySets = vector.keys as Record<
   { kid: string; privateKeyPkcs8Pem: string }
 >;
 
-const jwksByName = new Map<string, { keys: unknown[] }>();
+const jwksByName = new Map<string, JSONWebKeySet>();
 for (const [name, material] of Object.entries(keySets)) {
   const key = createPublicKey(createPrivateKey(material.privateKeyPkcs8Pem));
-  const jwk = key.export({ format: "jwk" }) as Record<string, unknown>;
-  jwksByName.set(name, { keys: [{ ...jwk, kid: material.kid, alg: "RS256", use: "sig" }] });
+  const jwk = key.export({ format: "jwk" });
+  jwksByName.set(name, {
+    keys: [{ ...jwk, kid: material.kid, alg: "RS256", use: "sig" }],
+  });
 }
 
 let pass = 0;
