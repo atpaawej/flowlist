@@ -3,6 +3,12 @@ main = ".open-next/worker.js"
 compatibility_date = "2026-10-02"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
+# The audience agents mint tokens for is `flowlist.agentonboard.xyz`, and the
+# audience is baked into every token's `aud` claim: changing this hostname later
+# invalidates every token ever issued. `AON_AUDIENCE` must match it exactly, or
+# every request 401s with AUDIENCE_MISMATCH.
+routes = [{ pattern = "flowlist.agentonboard.xyz", custom_domain = true }]
+
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"
@@ -10,8 +16,35 @@ binding = "ASSETS"
 [dev]
 port = 4565
 
+[vars]
+# Read directly by src/lib/agent-auth.ts and the /auth.md route, which is why
+# it is a Worker variable rather than only a local .env entry: `next build` bakes
+# env into the bundle, so a value set at build time alone would not be readable
+# at request time on the deployed Worker. `npx wrangler secret put AON_AUDIENCE`
+# sets the same name as an encrypted secret, which takes precedence over this.
+AON_AUDIENCE = "flowlist.agentonboard.xyz"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "flowlist-db"
 database_id = "7386d6e6-5071-4bef-8622-4ad123e8bfde"
 migrations_dir = "migrations"
+
+# Per-user request budget for /api/agent/* — 120 requests per minute, keyed by
+# the Clerk user id the agent token resolves to. Counters live in Cloudflare,
+# not D1, so agent traffic never contends with the reads serving the dashboard.
+#
+# NOT YET PROVISIONED — deliberately absent rather than stubbed with a
+# placeholder namespace id, which deploys as a valid-looking binding that never
+# counts a request. `withAgentAuth` skips limiting when the binding is missing,
+# so the agent API is currently unthrottled.
+#
+# To enable: upgrade wrangler past 4.141.0, which has no `ratelimits`
+# command, then run `npx wrangler ratelimits create AGENT_RATE_LIMITER` and
+# paste the returned namespace id into the block below.
+#
+# [[unsafe.bindings]]
+# name = "AGENT_RATE_LIMITER"
+# type = "ratelimits"
+# namespace_id = "<from wrangler ratelimits create>"
+# simple = { limit = 120, period = 60 }
