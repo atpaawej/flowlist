@@ -64,6 +64,37 @@ const fail = (code: string, error: string, status: number, headers?: HeadersInit
   NextResponse.json({ code, error }, { status, headers });
 
 /**
+ * The Worker bindings, or undefined outside the Cloudflare runtime. Mirrors how
+ * `lib/d1.ts` reaches the `DB` binding.
+ */
+const workerEnv = (): Record<string, unknown> | undefined => {
+  const context = (
+    globalThis as Record<PropertyKey, unknown>
+  )[Symbol.for("__cloudflare-context__")] as
+    | { env?: Record<string, unknown> }
+    | undefined;
+  return context?.env;
+};
+
+/**
+ * The hostname agent tokens are minted for.
+ *
+ * `audience` is a literal we configure, never anything read off the request — an
+ * audience the caller controls is not a check. `/auth.md` is generated from this
+ * same value, so the published contract and the verified one cannot disagree.
+ *
+ * It is read from the Worker's environment rather than only from `process.env`
+ * because `next build` inlines env into the bundle: a value present only at
+ * build time would not resolve at request time on the deployed Worker. A
+ * `wrangler secret` of the same name takes precedence over a `[vars]` entry.
+ */
+export const agentAudience = (): string | undefined => {
+  const bound = workerEnv()?.AON_AUDIENCE;
+  const value = typeof bound === "string" ? bound : process.env.AON_AUDIENCE;
+  return value?.trim() || undefined;
+};
+
+/**
  * The whole identity boundary: a verified AgentOnboard email becomes a Flowlist
  * user id, or nothing at all.
  *
@@ -119,13 +150,9 @@ interface RateLimiterBinding {
 }
 
 const rateLimiter = (): RateLimiterBinding | undefined => {
-  const context = (
-    globalThis as Record<PropertyKey, unknown>
-  )[Symbol.for("__cloudflare-context__")] as
-    | { env?: Record<string, unknown> }
+  const binding = workerEnv()?.AGENT_RATE_LIMITER as
+    | RateLimiterBinding
     | undefined;
-
-  const binding = context?.env?.AGENT_RATE_LIMITER as RateLimiterBinding | undefined;
   return binding && typeof binding.limit === "function" ? binding : undefined;
 };
 
@@ -151,11 +178,7 @@ export async function withAgentAuth<A>(
     AppServices
   >
 ): Promise<NextResponse> {
-  // `audience` is a literal we configure, never anything read off the request —
-  // an audience the caller controls is not a check. `public/auth.md` is
-  // generated from this same variable, so the published contract and the
-  // verified one cannot disagree.
-  const audience = process.env.AON_AUDIENCE?.trim();
+  const audience = agentAudience();
   if (!audience) {
     console.error("[flowlist] agent auth rejected: CONFIG_ERROR");
     return fail(

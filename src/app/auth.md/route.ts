@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { agentAudience } from "@/lib/agent-auth";
 
 /**
  * The discovery file an agent reads to learn that Flowlist accepts AgentOnboard
@@ -122,7 +123,7 @@ export async function GET() {
   // so the same source serves the dev audience and the production one.
   await connection();
 
-  const audience = process.env.AON_AUDIENCE?.trim();
+  const audience = agentAudience();
   if (!audience) {
     return new Response(
       "# Flowlist API\n\nThis deployment has no agent audience configured.\n",
