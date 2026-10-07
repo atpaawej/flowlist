@@ -100,9 +100,9 @@ export const agentAudience = (): string | undefined => {
  *
  * Why matching on email is defensible for this deployment: Flowlist and
  * AgentOnboard are operated by the same principal, and `users.email` is only
- * ever written from a Clerk session (`UserService.ensure`, called on every
- * authenticated request). A row in `users` therefore means the inbox was proven
- * at signup, which is the same assertion the token makes.
+ * ever written from a proven inbox — a Clerk session (`UserService.ensure`) or
+ * an AgentOnboard token (`POST /api/agent/signup`). A row in `users` therefore
+ * means the inbox was proven, which is the same assertion the token makes.
  *
  * For a service where the two ends have different operators this function would
  * be an account-takeover path — the AgentOnboard docs are explicit about that,
@@ -113,22 +113,30 @@ export const agentAudience = (): string | undefined => {
  * - **Never create a row here.** AgentOnboard has no consent model: any of its
  *   users can mint a valid token for this audience whether or not they have ever
  *   heard of Flowlist. An unknown email returns `null` so the caller gets
- *   `ACCOUNT_REQUIRED` -> 403, and the human is sent to sign up.
- * - **`ORDER BY created_at`** because `users.email` carries no UNIQUE
- *   constraint. Picking a row deterministically keeps an agent bound to the
- *   same account across requests instead of flapping between duplicates.
+ *   `ACCOUNT_REQUIRED` -> 403, and the agent is pointed at the signup endpoint.
+ *   Creation lives in exactly one handler, `api/agent/signup`; importing
+ *   `createAgentAccount` there is the whole opt-in, and this function is what
+ *   keeps that opt-in from leaking into every other route.
+ *
+ * `users.email` carries a UNIQUE index (migration 0002), so this is a plain
+ * indexed lookup — no ordering needed to disambiguate, and no chance of flapping
+ * between two rows for the same human.
+ *
+ * Exported so the signup handler and this guard resolve identically. If they
+ * drifted, an account created one moment earlier could fail to resolve on the
+ * next request.
  *
  * Only `null` and `undefined` mean "no account"; the SDK resolves `0` and `""`
  * as real user ids.
  *
  * Throwing is safe and expected to become `RESOLVER_ERROR` — never
- * `ACCOUNT_REQUIRED`, because a database that is down must not send a human off
+ * `ACCOUNT_REQUIRED`, because a database that is down must not send an agent off
  * to fix an account that is fine.
  */
-const resolveAccount = (db: DatabaseService) => async ({ email }: { email: string }) => {
+export const resolveAccount = (db: DatabaseService) => async ({ email }: { email: string }) => {
   const rows = await Effect.runPromise(
     db.all<{ id: string }>(
-      "SELECT id FROM users WHERE email = ? ORDER BY created_at LIMIT 1",
+      "SELECT id FROM users WHERE email = ? LIMIT 1",
       [normalizeEmail(email)]
     )
   );
@@ -237,15 +245,16 @@ export async function withAgentAuth<A>(
 
   if (userId === null || userId === undefined) {
     // 403, not 401. The token verified — the account does not exist, and
-    // re-authenticating cannot create one. `location` points at the same
-    // sign-up flow `auth.md` advertises.
+    // re-authenticating cannot create one. `location` points at the signup door
+    // `auth.md` advertises, which the agent calls itself: no human step.
     console.warn("[flowlist] agent auth rejected: ACCOUNT_REQUIRED");
     return fail(
       "ACCOUNT_REQUIRED",
-      "This identity has no Flowlist account. Ask the human to sign up at " +
-        `https://${audience}/sign-up, then retry once. Retrying without that will never succeed.`,
+      "This identity has no Flowlist account. Create one at " +
+        `https://${audience}/api/agent/signup with this same token, then retry ` +
+        "the original request once. Retrying without that will never succeed.",
       403,
-      { location: `https://${audience}/sign-up` }
+      { location: `https://${audience}/api/agent/signup` }
     );
   }
 

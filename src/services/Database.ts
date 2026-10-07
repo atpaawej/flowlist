@@ -25,6 +25,24 @@ export interface DatabaseService {
     sql: string,
     params?: readonly unknown[]
   ) => Effect.Effect<void, DatabaseError>;
+
+  /**
+   * Runs several statements as one unit.
+   *
+   * On D1 a batch *is* a transaction: a failing statement rolls the whole
+   * sequence back. That is what makes it safe to move rows between two
+   * `users.id` values — see the merge in `UserService.ensure`. Explicit
+   * `BEGIN`/`COMMIT` are not used, and must not be: D1 rejects them.
+   */
+  readonly batch: (
+    statements: readonly DbStatement[]
+  ) => Effect.Effect<void, DatabaseError>;
+}
+
+/** One parameterised statement, as handed to {@link DatabaseService.batch}. */
+export interface DbStatement {
+  readonly sql: string;
+  readonly params?: readonly unknown[];
 }
 
 /**
