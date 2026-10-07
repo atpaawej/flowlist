@@ -12,6 +12,13 @@ import { agentAudience } from "@/lib/agent-auth";
  * and the audience we verify against cannot drift apart — a mismatch between
  * them is the single most common cause of a 401 here.
  *
+ * This file is also where the account-creation capability is published.
+ * Whether an agent may create an account is not in the token and AgentOnboard
+ * does not put it there — it is a partner-published fact, read by the agent like
+ * everything else in this document. So the 403 row must name the signup endpoint,
+ * and `POST /api/agent/signup` must actually exist; a table naming a flow this
+ * service does not have is worse than no table.
+ *
  * Nothing in the AgentOnboard toolchain reads this file. That is precisely why
  * the format has to be exact: the document is the contract, and no validator
  * exists to tell us it is wrong.
@@ -23,6 +30,11 @@ const authMd = (audience: string) => `# Flowlist API
 This service accepts AgentOnboard. Verified agent requests are authorized against the
 Flowlist account that the verified email maps to, and read and write the same to-dos
 as the human web app.
+
+An agent can create an account for a human who does not have one yet, via
+\`POST /api/agent/signup\`. The account belongs to the verified email and no other:
+when that human later signs in at https://${audience}/sign-in, they see everything
+the agent has already done.
 
 Agent and human share one task list: changes made through this API appear immediately
 in the dashboard.
@@ -41,6 +53,24 @@ minutes; mint a new one as needed.
 All eight endpoints require the header above. \`/api/agent/todos\` and \`/api/agent/tags\`
 are rate limited to 120 requests per minute per user; \`429\` with \`RATE_LIMITED\` means
 slow down and retry.
+
+### \`POST /api/agent/signup\`
+
+Create the calling account. An agent that got \`403 ACCOUNT_REQUIRED\` elsewhere calls this
+with the same token, then retries its original request once — no human step in between.
+
+This is the only endpoint that creates an account. It reads nothing from the request body:
+the account's email comes from the verified token, so there is no way to register someone
+else's address.
+
+- Request: no body
+- Success: \`201\` with \`{ "created": true }\` when the account was just made, or \`200\`
+  with \`{ "created": false }\` when it already existed
+- Calling it twice with the same token is safe and never creates a second account
+
+The account is created with a generated id and no password. The human who owns it can sign
+in at https://${audience}/sign-in with the same email at any time, and will find everything
+the agent has already done.
 
 ### \`GET /api/agent/todos\`
 
@@ -109,7 +139,7 @@ the to-dos themselves are not deleted.
 |---|---|---|
 | 400 | \`INVALID_REQUEST\` | The body or query did not match the documented shape. Fix the request — retrying it unchanged will fail identically. |
 | 401 | \`EXPIRED\`, \`INVALID_SIGNATURE\`, \`AUDIENCE_MISMATCH\`, \`ISSUER_MISMATCH\`, \`MALFORMED_TOKEN\`, \`UNKNOWN_KEY\`, \`KEY_SOURCE_UNAVAILABLE\`, \`MISSING_EMAIL\` | The token was rejected. Run \`aon token get ${audience}\` again and retry **once**. If it fails again, stop and tell the human — do not retry in a loop. |
-| 403 | \`ACCOUNT_REQUIRED\` | The identity is genuine but has no Flowlist account. Ask the human to sign up at https://${audience}/sign-up, then retry. **Retrying without that will never succeed**, and sending them to do anything else will not either. |
+| 403 | \`ACCOUNT_REQUIRED\` | The identity is genuine but has no Flowlist account. Create one at \`POST /api/agent/signup\` with the same token, then retry the original request **once**. **Retrying without that will never succeed.** |
 | 404 | \`NOT_FOUND\` | No such to-do on this account. Do not retry with the same id. |
 | 429 | \`RATE_LIMITED\` | Over 120 requests per minute for this user. Wait and retry after a delay. |
 | 500 | \`RESOLVER_ERROR\`, \`CONFIG_ERROR\`, \`INTERNAL_ERROR\` | A fault on Flowlist's side, not yours. Retry after a short delay. Do not re-authenticate — the token is fine. |

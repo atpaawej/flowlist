@@ -5,6 +5,7 @@ import { Effect } from "effect";
 import {
   DatabaseError,
   type DatabaseService,
+  type DbStatement,
 } from "@/services/Database";
 
 /**
@@ -14,11 +15,22 @@ import {
 interface D1Statement {
   bind(...params: unknown[]): D1Statement;
   all<T>(): Promise<{ results: T[] }>;
-  run(): Promise<unknown>;
+  run(): Promise<D1RunResult>;
+}
+
+interface D1RunResult {
+  meta?: { changes?: number };
 }
 
 interface D1Binding {
   prepare(sql: string): D1Statement;
+  /**
+   * `batch` is declared even though the surrounding interface is kept minimal:
+   * D1 treats a batch as a SQL transaction, and the account merge that
+   * `UserService.ensure` performs needs that atomicity to exist. Without it the
+   * merge is a sequence of independent writes that can fail partway through.
+   */
+  batch(statements: D1Statement[]): Promise<unknown>;
 }
 
 /**
@@ -47,6 +59,18 @@ function bindingDatabase(db: D1Binding): DatabaseService {
             .then(() => undefined),
         catch: (cause) => new DatabaseError(`D1 execute failed: ${sql}`, cause),
       }),
+    batch: (statements: readonly DbStatement[]) =>
+      Effect.tryPromise({
+        try: () =>
+          db.batch(
+            statements.map((s) => db.prepare(s.sql).bind(...(s.params ?? [])))
+          ),
+        catch: (cause) =>
+          new DatabaseError(
+            `D1 batch failed (${statements.length} statements)`,
+            cause
+          ),
+      }),
   };
 }
 
@@ -62,16 +86,25 @@ function restDatabase(config: {
   const endpoint = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`;
 
   const query = async <T>(
-    sql: string,
-    params: readonly unknown[]
-  ): Promise<T[]> => {
+    statements: readonly DbStatement[],
+    asArray = false
+  ): Promise<T[][]> => {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${config.token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ sql, params: [...params] }),
+      // Single statements keep the object form this driver has always sent;
+      // only `batch` uses the array form, which makes the request one
+      // transactional unit matching `batch()` on the native binding. Keeping
+      // the shapes separate means an unknown change in array support could not
+      // break every ordinary read in local dev.
+      body: JSON.stringify(
+        asArray
+          ? statements.map((s) => ({ sql: s.sql, params: [...(s.params ?? [])] }))
+          : { sql: statements[0].sql, params: [...(statements[0].params ?? [])] }
+      ),
     });
 
     if (!res.ok) {
@@ -89,19 +122,28 @@ function restDatabase(config: {
       throw new Error(`D1 REST API error: ${JSON.stringify(json.errors)}`);
     }
 
-    return json.result?.[0]?.results ?? [];
+    return (json.result ?? []).map((r) => r.results ?? []);
   };
 
   return {
     all: <T>(sql: string, params: readonly unknown[] = []) =>
       Effect.tryPromise({
-        try: () => query<T>(sql, params),
+        try: async () => (await query<T>([{ sql, params }]))[0] ?? [],
         catch: (cause) => new DatabaseError(`D1 query failed: ${sql}`, cause),
       }),
     execute: (sql: string, params: readonly unknown[] = []) =>
       Effect.tryPromise({
-        try: () => query(sql, params).then(() => undefined),
+        try: () => query([{ sql, params }]).then(() => undefined),
         catch: (cause) => new DatabaseError(`D1 execute failed: ${sql}`, cause),
+      }),
+    batch: (statements: readonly DbStatement[]) =>
+      Effect.tryPromise({
+        try: () => query(statements, true).then(() => undefined),
+        catch: (cause) =>
+          new DatabaseError(
+            `D1 REST batch failed (${statements.length} statements)`,
+            cause
+          ),
       }),
   };
 }

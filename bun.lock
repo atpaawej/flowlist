@@ -5,7 +5,7 @@
     "": {
       "name": "flowlist",
       "dependencies": {
-        "@agentonboard/sdk": "^0.2.1",
+        "@agentonboard/sdk": "^0.3.0",
         "@clerk/nextjs": "^7.9.10",
         "@clerk/themes": "^2.4.57",
         "@radix-ui/react-checkbox": "^1.3.11",
@@ -33,7 +33,7 @@
     },
   },
   "packages": {
-    "@agentonboard/sdk": ["@agentonboard/sdk@0.2.1", "", { "dependencies": { "jose": "^6.2.12" } }, "sha512-WqWt4uhlQw5ki6IBdsqtgIMCmpzVEEPgz6N1Z4UJAOWa1NabWZkC4sZTVTfXWWPS2WUt4W/pOSqqaJ7Ek1jaew=="],
+    "@agentonboard/sdk": ["@agentonboard/sdk@0.3.0", "", { "dependencies": { "jose": "^6.2.12" } }, "sha512-eNsnEl7Zcpq+UUTwiuxXUqBVmjwYlpbzHXanoBL8wF9dWoBPX0QvHA0Y36pS86PWcIXW2GHD2YaJOSMr7HbMTg=="],
 
     "@alloc/quick-lru": ["@alloc/quick-lru@5.3.0", "", {}, "sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA=="],
 
