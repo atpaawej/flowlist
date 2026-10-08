@@ -24,6 +24,17 @@ port = 4565
 # sets the same name as an encrypted secret, which takes precedence over this.
 AON_AUDIENCE = "flowlist.agentonboard.xyz"
 
+# Clerk's publishable key is `NEXT_PUBLIC_`-prefixed, so `next build` inlines it
+# into the client bundle. It must ALSO be readable at request time on the server,
+# for the same reason AON_AUDIENCE is: `process.env` is only populated from
+# bindings by OpenNext's `populateProcessEnv` at runtime. Both halves are needed —
+# the build-time inlining for the browser, this entry for the server.
+#
+# This is a publishable key (the `pk_live_` half of the pair), so it is safe in
+# plaintext and in version control. The secret half lives in `wrangler secret`,
+# never here.
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuZmxvd2xpc3QuYWdlbnRvbmJvYXJkLnh5eiQ"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "flowlist-db"
