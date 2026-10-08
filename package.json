@@ -12,7 +12,10 @@
     "agent:conformance": "bun scripts/agentonboard-conformance.ts",
     "agent:merge-check": "bun .merge-harness/merge-harness.ts && bun .merge-harness/migration-check.ts && bun .merge-harness/authmd-check.ts",
     "preview": "opennextjs-cloudflare build && wrangler dev",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "deploy": "bun run cf:build && bun run cf:deploy",
+    "cf:build": "node node_modules/@opennextjs/cloudflare/dist/cli/index.js build",
+    "cf:deploy": "node node_modules/@opennextjs/cloudflare/dist/cli/index.js deploy",
+    "cf:tail": "node node_modules/wrangler/wrangler-dist/cli.js tail"
   },
   "dependencies": {
     "@agentonboard/sdk": "^0.3.0",
@@ -39,5 +42,8 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "wrangler": "^4.148.0"
+  },
+  "patchedDependencies": {
+    "@opennextjs/cloudflare@1.20.9": "patches/@opennextjs%2Fcloudflare@1.20.9.patch"
   }
 }

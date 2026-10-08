@@ -32,6 +32,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@opennextjs/cloudflare@1.20.9": "patches/@opennextjs%2Fcloudflare@1.20.9.patch",
+  },
   "packages": {
     "@agentonboard/sdk": ["@agentonboard/sdk@0.3.0", "", { "dependencies": { "jose": "^6.2.12" } }, "sha512-eNsnEl7Zcpq+UUTwiuxXUqBVmjwYlpbzHXanoBL8wF9dWoBPX0QvHA0Y36pS86PWcIXW2GHD2YaJOSMr7HbMTg=="],
 
