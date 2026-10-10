@@ -68,9 +68,11 @@ else's address.
   with \`{ "created": false }\` when it already existed
 - Calling it twice with the same token is safe and never creates a second account
 
-The account is created with a generated id and no password. The human who owns it can sign
-in at https://${audience}/sign-in with the same email at any time, and will find everything
-the agent has already done.
+The account is created in Clerk and in Flowlist under a single id, with the email already
+marked verified and no password set. The human who owns that email signs in at
+https://${audience}/sign-in with the same address — their Google sign-in links straight into
+the account the agent made — and finds everything the agent has already done. Because no
+password is ever set, an agent can add to the account but can never sign in to it.
 
 ### \`GET /api/agent/todos\`
 
