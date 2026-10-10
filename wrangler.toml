@@ -35,6 +35,24 @@ AON_AUDIENCE = "flowlist.agentonboard.xyz"
 # never here.
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuZmxvd2xpc3QuYWdlbnRvbmJvYXJkLnh5eiQ"
 
+# The secret half is set on the Worker, not here, and `wrangler secret list`
+# confirms `CLERK_SECRET_KEY` is present. `POST /api/agent/signup` needs it to
+# reach Clerk's Backend API, at request time, for the same `populateProcessEnv`
+# reason the publishable key is repeated above — a value baked in at build time
+# would not resolve on the deployed Worker.
+#
+# Check, don't assume:  npx wrangler secret list --name flowlist
+#
+# It survives deploys — every upload carries the live secrets into the new
+# version — but it does not survive recreating the Worker. If agent signup
+# starts answering RESOLVER_ERROR with a 401 from `createUser`, either the
+# secret is gone or it belongs to a different Clerk instance than the
+# publishable key above; restore it with:
+#
+#   npx wrangler secret put CLERK_SECRET_KEY
+#
+# Local `next dev` reads the same key from .env.local instead.
+
 [[d1_databases]]
 binding = "DB"
 database_name = "flowlist-db"

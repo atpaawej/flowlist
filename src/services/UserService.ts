@@ -21,13 +21,16 @@ export const UserService = Context.Service<UserServiceApi>("UserService");
 /**
  * Folds an agent-created account into the human's Clerk account.
  *
- * The situation: an agent called `POST /api/agent/signup`, which inserted a
- * `users` row with a generated id — not a Clerk user id — because the human had
- * not signed in yet. Now they have. Without this, `ensure` would insert a
- * *second* row for the same email and the two would sit side by side forever:
- * the agent's traffic keeps resolving to the older row, the human's dashboard
- * shows an empty list, and nothing anywhere reports an error. Split brain, no
- * alarm.
+ * The situation: an agent called `POST /api/agent/signup` back when that
+ * endpoint wrote a `users` row under a generated id rather than a Clerk one,
+ * so an agent-created account and the human's Clerk account were two rows for
+ * one inbox. The signup endpoint now creates the Clerk user too and files the
+ * row under its id, so new accounts need no merge — but the rows written
+ * before that are still out there, and this is what folds them in. Without it,
+ * `ensure` would insert a *second* row for the same email and the two would sit
+ * side by side forever: the agent's traffic keeps resolving to the older row,
+ * the human's dashboard shows an empty list, and nothing anywhere reports an
+ * error. Split brain, no alarm.
  *
  * So when the email already belongs to a different row, that row's todos and
  * tags move to the Clerk id and the old row is removed.

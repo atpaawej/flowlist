@@ -104,6 +104,12 @@ export const agentAudience = (): string | undefined => {
  * an AgentOnboard token (`POST /api/agent/signup`). A row in `users` therefore
  * means the inbox was proven, which is the same assertion the token makes.
  *
+ * The email is a join key here, not the identity: `users.id` is a Clerk user id
+ * in every row, including the ones agent signup writes, which is why a human
+ * signing in with the same address lands on the id their agent's to-dos are
+ * already filed under instead of needing a merge. The merge in
+ * `UserService.ensure` is still there for rows written before that held.
+ *
  * For a service where the two ends have different operators this function would
  * be an account-takeover path — the AgentOnboard docs are explicit about that,
  * and the rule is that this must move behind an explicit connect flow.
